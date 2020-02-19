@@ -27,3 +27,10 @@ pdf = ' '.join(pdf)
 
 
 
+# upadte TR character
+
+# detect format
+
+# convert tabular form
+
+
