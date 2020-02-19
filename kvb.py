@@ -11,6 +11,8 @@ import PyPDF2
 import os
 import re
 import glob
+os.chdir('/Users/mturan/Desktop/kvb/scripts')
+import dictionary
 
 os.chdir('/Users/mturan/Desktop/kvb')
 os.getcwd()
@@ -168,23 +170,56 @@ def get_term(pdf):
 
 
 
-    
-    
+accounts = dictionary.accounts
+for i in accounts:
+    print(i)
     
 
-pdf = read_raw_pdf("Detaylı Beyanname.pdf")
+
+
+def get_value_of_account(account: str, pdf: str):
+    """
+    The purpose of this function is to get values of specified account
+    """
+
+    account_index = pdf.find(account)
+    account_length = len(account)
+    
+     
+    values_account = pdf[account_index + account_length:]
+    
+    first_comma = values_account.find(",")
+    
+    second_comma = values_account.find(",", first_comma+1)
+    
+    past_value = values_account[:first_comma+3]
+    current_value = values_account[first_comma+3: second_comma+3]
+    
+    values = [past_value, current_value]
+    
+    return values
+
+    # MÜKERRER TEKRARLANAN HESAPLAR İÇİN ÇÖZ
+
+
+
+
+
+pdf = read_raw_pdf("kvb1.pdf")
 pdf = turkish_ch(pdf)
 
 print(get_tax_id(pdf))
 print(type_check(pdf)) 
 print(get_name(pdf))
 print(get_term(pdf)) 
-
+print(get_value_of_account("E. Faaliyet Giderleri (-)", pdf))
 
 # DATABASE
 test_cases = ["kvb1.pdf","kvb2.pdf","kvb3.pdf","kvb4.pdf",
               "kvb5.pdf","kvb6.pdf","kvb7.pdf","kvb8.pdf",
               "kvb9.pdf"]
+
+
 
 
 tax_id = []
