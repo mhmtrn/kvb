@@ -10,12 +10,20 @@ import pandas as pd
 import PyPDF2
 import os
 import re
-import glob
 os.chdir('/Users/mturan/Desktop/kvb/scripts')
 import dictionary
 
 os.chdir('/Users/mturan/Desktop/kvb')
 os.getcwd()
+
+
+current_assets = dictionary.current_assets
+tangible_assets = dictionary.tangible_assets
+short_term_liabilities = dictionary.short_term_liabilities
+long_term_liabilities = dictionary.long_term_liabilities
+equity = dictionary.equity
+income_sheet = dictionary.income_sheet
+
 
 
 def read_raw_pdf(name_of_file: str):
@@ -170,32 +178,38 @@ def get_term(pdf):
 
 
 
-accounts = dictionary.accounts
-for i in accounts:
-    print(i)
-    
 
 
 
-def get_value_of_account(account: str, pdf: str):
+def get_value_of_account(account: str, part: str):
     """
     The purpose of this function is to get values of specified account
     """
 
-    account_index = pdf.find(account)
-    account_length = len(account)
-    
-     
-    values_account = pdf[account_index + account_length:]
-    
-    first_comma = values_account.find(",")
-    
-    second_comma = values_account.find(",", first_comma+1)
-    
-    past_value = values_account[:first_comma+3]
-    current_value = values_account[first_comma+3: second_comma+3]
-    
-    values = [past_value, current_value]
+    if type_check(pdf) == "1010":  
+        account_index = part.find(account)     
+        if account_index == -1:
+            values = [] # fake move
+        else:
+            account_length = len(account)     
+            values_account = part[account_index + account_length:]        
+            first_comma = values_account.find(",")        
+            second_comma = values_account.find(",", first_comma+1)        
+            past_value = values_account[:first_comma+3]
+            current_value = values_account[first_comma+3: second_comma+3]      
+            values = [past_value, current_value]
+
+    else:
+        account_index = part.find(account)
+        if account_index == -1:
+            values = [] # fake move
+        else:
+            account_length = len(account)     
+            values_account = part[account_index + account_length:]        
+            first_comma = values_account.find(",")                
+            value = values_account[:first_comma+3]
+            values = [value]
+
     
     return values
 
@@ -203,53 +217,131 @@ def get_value_of_account(account: str, pdf: str):
 
 
 
+def produce_fs_tables(pdf):
+    """
+    The purpose of this function is to extract financial values from the document
+    """
+    
+    if type_check(pdf) == "1010":  
+        
+        current_assets_index = pdf.find(current_assets[0])
+        tangible_assets_index = pdf.find(tangible_assets[0])
+        short_term_liabilities_index = pdf.find(short_term_liabilities[0])
+        long_term_liabilities_index = pdf.find(long_term_liabilities[0])
+        equity_index = pdf.find(equity[0])
+        income_sheet_index = pdf.find(income_sheet[0])
+        income_sheet_index_end = pdf.find(income_sheet[-1])+100 # (heuristic)
+        
+        current_assets_part = pdf[current_assets_index:tangible_assets_index]
+        tangible_assets_part = pdf[tangible_assets_index:short_term_liabilities_index]
+        short_term_liabilities_part = pdf[short_term_liabilities_index:long_term_liabilities_index]
+        long_term_liabilities_part = pdf[long_term_liabilities_index:equity_index]
+        equity_part = pdf[equity_index:income_sheet_index]
+        income_sheet_part = pdf[income_sheet_index:income_sheet_index_end]
+    
+        main_tables = [current_assets, 
+                       tangible_assets, 
+                       short_term_liabilities,
+                       long_term_liabilities, 
+                       equity,
+                       income_sheet]
+        
+        parts = [current_assets_part,
+                 tangible_assets_part,
+                 short_term_liabilities_part,
+                 long_term_liabilities_part,
+                 equity_part,
+                 income_sheet_part]
+        
+    
+        current_year = int(get_term(pdf))
+        past_year = current_year-1
+    
+        tables = []
+        for i, ii in zip(main_tables, parts):
+            values_account = []
+            names_account = []
+            for accounts in i: 
+                names_account.append(accounts)
+                account = get_value_of_account(accounts, ii)
+                values_account.append(account)
+            
+            fs = pd.DataFrame(list(zip(names_account, values_account)), 
+                           columns =["accounts", "values"])
+        
+            tags = fs['values'].apply(pd.Series)
+            
+            if tags.shape[1] == 0:
+                tags[past_year] = 0
+                tags[current_year] = 0
+                fs = pd.concat([fs["accounts"], tags[:]], axis=1)
+            else:            
+                tags.columns = [past_year, current_year]
+        
+                tags[past_year] = tags[past_year].str.replace(".", "")
+                tags[past_year] = tags[past_year].fillna(0)
+                tags[past_year] = tags[past_year].replace(',','.', regex=True).astype(float)
+                
+                tags[current_year] = tags[current_year].str.replace(".", "")
+                tags[current_year] = tags[current_year].fillna(0)
+                tags[current_year] = tags[current_year].replace(',','.', regex=True).astype(float)
+                
+                fs = pd.concat([fs["accounts"], tags[:]], axis=1)
+        
+            tables.append(fs)
+        
+        tables = pd.concat(tables)
+        
+        
+    elif type_check(pdf) == "1032":
+        income_sheet_index = pdf.find(income_sheet[0])
+        income_sheet_index_end = pdf.find(income_sheet[-1])+100 # (heuristic)
+        
+        income_sheet_part = pdf[income_sheet_index:income_sheet_index_end]
+        
+        values_account = []
+        names_account = []
+        for accounts in income_sheet: 
+            names_account.append(accounts)
+            account = get_value_of_account(accounts, income_sheet_part)
+            values_account.append(account)
+            
+        fs = pd.DataFrame(list(zip(names_account, values_account)), 
+                       columns =["accounts", "values"])
+        
+        tags = fs['values'].apply(pd.Series)
+        
+        term = get_term(pdf)
+        
+        tags.columns = [str(term)]
+        
+        tags[str(term)] = tags[str(term)].str.replace(".", "")
+        tags[str(term)] = tags[str(term)].fillna(0)
+        tags[str(term)] = tags[str(term)].replace(',','.', regex=True).astype(float)
+        
+        fs = pd.concat([fs["accounts"], tags[:]], axis=1)
+        
+        tables = fs
+
+    return tables
+  
 
 
-pdf = read_raw_pdf("kvb1.pdf")
+
+
+pdf = read_raw_pdf("kvb4.pdf")
 pdf = turkish_ch(pdf)
 
 print(get_tax_id(pdf))
 print(type_check(pdf)) 
 print(get_name(pdf))
 print(get_term(pdf)) 
-print(get_value_of_account("E. Faaliyet Giderleri (-)", pdf))
+print(produce_fs_tables(pdf))
 
-# DATABASE
-test_cases = ["kvb1.pdf","kvb2.pdf","kvb3.pdf","kvb4.pdf",
-              "kvb5.pdf","kvb6.pdf","kvb7.pdf","kvb8.pdf",
-              "kvb9.pdf"]
+test = produce_fs_tables(pdf)
 
 
 
-
-tax_id = []
-names = []
-terms = []
-types = []
-pdfs = []
-
-for i in test_cases:
-    pdf = read_raw_pdf(i)
-    pdf = turkish_ch(pdf)
-    pdfs.append(pdf)
-    
-    tax = get_tax_id(pdf)
-    tax_id.append(tax)
-    
-    type_form = type_check(pdf)
-    types.append(type_form)
-    
-    name = get_name(pdf)
-    names.append(name)
-    
-    term = get_term(pdf)
-    terms.append(term)
-    
-df = pd.DataFrame(list(zip(tax_id, types, names, terms, pdfs)), 
-               columns =['tax_id', 'types', 'names', 'terms', 'pdfs'])
-
-
-df.to_pickle("df")
     
     
     
