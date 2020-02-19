@@ -10,6 +10,7 @@ import pandas as pd
 import PyPDF2
 import os
 import re
+import glob
 
 os.chdir('/Users/mturan/Desktop/kvb')
 os.getcwd()
@@ -171,7 +172,7 @@ def get_term(pdf):
     
     
 
-pdf = read_raw_pdf("kvb8.pdf")
+pdf = read_raw_pdf("Detaylı Beyanname.pdf")
 pdf = turkish_ch(pdf)
 
 print(get_tax_id(pdf))
@@ -182,7 +183,8 @@ print(get_term(pdf))
 
 # DATABASE
 test_cases = ["kvb1.pdf","kvb2.pdf","kvb3.pdf","kvb4.pdf",
-              "kvb5.pdf","kvb6.pdf","kvb7.pdf","kvb8.pdf"]
+              "kvb5.pdf","kvb6.pdf","kvb7.pdf","kvb8.pdf",
+              "kvb9.pdf"]
 
 
 tax_id = []
