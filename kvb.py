@@ -145,7 +145,6 @@ def type_check(pdf):
 
 
 
-
 def get_term(pdf):
     """
     The purpose of this function is to get year of tax decalaration
@@ -175,9 +174,6 @@ def get_term(pdf):
                     txt = txt[1:] 
                    
     return year
-
-
-
 
 
 
@@ -323,24 +319,22 @@ def produce_fs_tables(pdf):
         fs = pd.concat([fs["accounts"], tags[:]], axis=1)
         
         tables = fs
+        
+    tables = tables.reset_index(drop=True)
 
     return tables
   
 
 
-
-
-pdf = read_raw_pdf("kvb8.pdf")
+pdf = read_raw_pdf("kvb9.pdf")
 pdf = turkish_ch(pdf)
 
 print(get_tax_id(pdf))
 print(type_check(pdf)) 
 print(get_name(pdf))
 print(get_term(pdf)) 
-print(produce_fs_tables(pdf))
 
 test = produce_fs_tables(pdf)
-
 
 
     
