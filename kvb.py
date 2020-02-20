@@ -222,8 +222,9 @@ def produce_fs_tables(pdf):
     The purpose of this function is to extract financial values from the document
     """
     
-    if type_check(pdf) == "1010":  
+    if type_check(pdf) == "1010":   # 1010 is unique code for year end reports
         
+        # these section is to extract related part from the report
         current_assets_index = pdf.find(current_assets[0])
         tangible_assets_index = pdf.find(tangible_assets[0])
         short_term_liabilities_index = pdf.find(short_term_liabilities[0])
@@ -239,14 +240,14 @@ def produce_fs_tables(pdf):
         equity_part = pdf[equity_index:income_sheet_index]
         income_sheet_part = pdf[income_sheet_index:income_sheet_index_end]
     
-        main_tables = [current_assets, 
+        main_tables = [current_assets,  # main tables are from dictionary prepared in "dictionary.py"
                        tangible_assets, 
                        short_term_liabilities,
                        long_term_liabilities, 
                        equity,
                        income_sheet]
         
-        parts = [current_assets_part,
+        parts = [current_assets_part, # extracted main tables
                  tangible_assets_part,
                  short_term_liabilities_part,
                  long_term_liabilities_part,
@@ -258,7 +259,7 @@ def produce_fs_tables(pdf):
         past_year = current_year-1
     
         tables = []
-        for i, ii in zip(main_tables, parts):
+        for i, ii in zip(main_tables, parts): # look tables (in the dictionary) and look for in parts (please see maintables and parts)
             values_account = []
             names_account = []
             for accounts in i: 
@@ -271,11 +272,11 @@ def produce_fs_tables(pdf):
         
             tags = fs['values'].apply(pd.Series)
             
-            if tags.shape[1] == 0:
+            if tags.shape[1] == 0: # if that part is empty, it needs another cleaning process
                 tags[past_year] = 0
                 tags[current_year] = 0
                 fs = pd.concat([fs["accounts"], tags[:]], axis=1)
-            else:            
+            else:            # cleaning process for converting number
                 tags.columns = [past_year, current_year]
         
                 tags[past_year] = tags[past_year].str.replace(".", "")
@@ -293,7 +294,7 @@ def produce_fs_tables(pdf):
         tables = pd.concat(tables)
         
         
-    elif type_check(pdf) == "1032":
+    elif type_check(pdf) == "1032": # 1032 is unique code for interim repots
         income_sheet_index = pdf.find(income_sheet[0])
         income_sheet_index_end = pdf.find(income_sheet[-1])+100 # (heuristic)
         
@@ -306,7 +307,7 @@ def produce_fs_tables(pdf):
             account = get_value_of_account(accounts, income_sheet_part)
             values_account.append(account)
             
-        fs = pd.DataFrame(list(zip(names_account, values_account)), 
+        fs = pd.DataFrame(list(zip(names_account, values_account)),  # in interim reports, there is only one table (income sheet)
                        columns =["accounts", "values"])
         
         tags = fs['values'].apply(pd.Series)
@@ -329,7 +330,7 @@ def produce_fs_tables(pdf):
 
 
 
-pdf = read_raw_pdf("kvb4.pdf")
+pdf = read_raw_pdf("kvb8.pdf")
 pdf = turkish_ch(pdf)
 
 print(get_tax_id(pdf))
